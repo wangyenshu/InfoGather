@@ -1,40 +1,49 @@
-import altair as alt
-import numpy as np
-import pandas as pd
 import streamlit as st
+import feedparser
 
-"""
-# Welcome to Streamlit!
+# You can update more Feeds as you like
+rss_feeds = {
+  "Select" : "",
+  "ielts" : "https://morss.it/:items=||*[class=news1]||li/https://www.chinaielts.org/whats_new/ielts_news.shtml",
+  "Times of India Top Stories" : "http://timesofindia.indiatimes.com/rssfeedstopstories.cms",
+  "BBC" : "https://www.bbc.com/news/rss.xml",
+  "The Guardian" : "https://www.theguardian.com/international/rss"
+}
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+#Parses an RSS feed and returns a list of articles.
+def parse_rss_feed(url):
+  feed = feedparser.parse(url)
+  articles = []
+  for entry in feed.entries:
+    article = {
+      "title": entry.title,
+      "link": entry.link,
+      "description": entry.summary,
+      "published_at": entry.published
+    }
+    articles.append(article)
+  return articles
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+# Title
+st.title("RSS Feed Reader")
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
+# Choose a Feed
+choose_news_feed = "**Select a News Feed:**"
+rss_feed_selected = st.selectbox(choose_news_feed, rss_feeds.keys())
+st.write(rss_feed_selected)
+selected_rss_feed_url = rss_feeds[rss_feed_selected]
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
+# Collect all Feeds
+all_articles = []
+articles = parse_rss_feed(selected_rss_feed_url)
+all_articles += articles
 
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
+# Sort articles by datetime
+all_articles.sort(key=lambda article: article["published_at"], reverse=True)
 
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
-
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+#Display Articles
+for article in all_articles:
+  st.markdown(f"**{article['title']}**")
+  st.markdown(f"{article['description']}", unsafe_allow_html=True)
+  st.markdown(f"Published on: {article['published_at']}")
+  st.markdown(f"Link: [More Info]({article['link']})")
